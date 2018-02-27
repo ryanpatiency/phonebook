@@ -12,3 +12,6 @@ orig.txt
 opt.txt
 output.txt
 runtime.png
+.cproject
+.project
+.settings/
