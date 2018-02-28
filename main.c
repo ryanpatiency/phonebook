@@ -11,8 +11,23 @@
 #else
 #define OUT_FILE "orig.txt"
 #endif
+#define HASH_TABLE_SIZE 100
 
 #define DICT_FILE "./dictionary/words.txt"
+
+int getHashKey(const char* str)
+{
+    int length = strlen(str);
+    unsigned int seed = 131; /* 31 131 1313 13131 131313 etc.. */
+    unsigned int hash = 0;
+    unsigned int i = 0;
+
+    for(i = 0; i < length; ++str, ++i) {
+        hash = (hash * seed) + (*str);
+    }
+
+    return hash % HASH_TABLE_SIZE;
+}
 
 static double diff_in_second(struct timespec t1, struct timespec t2)
 {
@@ -35,6 +50,7 @@ int main(int argc, char *argv[])
     struct timespec start, end;
     double cpu_time1, cpu_time2;
 
+
     /* check file opening */
     fp = fopen(DICT_FILE, "r");
     if (fp == NULL) {
@@ -42,12 +58,15 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    /* build the entry */
-    entry *pHead, *e;
-    pHead = (entry *) malloc(sizeof(entry));
     printf("size of entry : %lu bytes\n", sizeof(entry));
-    e = pHead;
-    e->pNext = NULL;
+
+    /* build the entry */
+    entry *pHead, *e, *hash_e[HASH_TABLE_SIZE], *hash_pHead[HASH_TABLE_SIZE];
+    for(int j = 0; j < HASH_TABLE_SIZE; j++) {
+        hash_pHead[j] = (entry *)malloc(sizeof(entry));
+        hash_e[j] = hash_pHead[j];
+        hash_e[j]->pNext = NULL;
+    }
 
 #if defined(__GNUC__)
     __builtin___clear_cache((char *) pHead, (char *) pHead + sizeof(entry));
@@ -58,7 +77,8 @@ int main(int argc, char *argv[])
             i++;
         line[i - 1] = '\0';
         i = 0;
-        e = append(line, e);
+        int key = getHashKey(line);
+        hash_e[key] = append(line, hash_e[key]);
     }
     clock_gettime(CLOCK_REALTIME, &end);
     cpu_time1 = diff_in_second(start, end);
@@ -66,15 +86,17 @@ int main(int argc, char *argv[])
     /* close file as soon as possible */
     fclose(fp);
 
-    e = pHead;
+//    e = pHead;
+    for(int j = 0; j < HASH_TABLE_SIZE; j++) {
+        hash_e[j] = hash_pHead[j];
+    }
 
     /* the givn last name to find */
     char input[MAX_LAST_NAME_SIZE] = "zyxel";
-    e = pHead;
-
-    assert(findName(input, e) &&
+    int key = getHashKey(input);
+    assert(findName(input, hash_e[key]) &&
            "Did you implement findName() in " IMPL "?");
-    assert(0 == strcmp(findName(input, e)->lastName, "zyxel"));
+    assert(0 == strcmp(findName(input, hash_e[key])->lastName, "zyxel"));
 
 #if defined(__GNUC__)
     __builtin___clear_cache((char *) pHead, (char *) pHead + sizeof(entry));
