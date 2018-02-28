@@ -47,7 +47,12 @@ plot: output.txt
 calculate: calculate.c
 	$(CC) $(CFLAGS_common) $^ -o $@
 
-.PHONY: clean
+
+.PHONY: clean style
 clean:
 	$(RM) $(EXEC) *.o perf.* \
 	      	calculate orig.txt opt.txt output.txt runtime.png
+
+style:
+	astyle --style=kr --indent=spaces=4 --suffix=none *.c
+	astyle --style=kr --indent=spaces=4 --suffix=none main.c

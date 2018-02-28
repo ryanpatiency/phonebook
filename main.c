@@ -11,7 +11,7 @@
 #else
 #define OUT_FILE "orig.txt"
 #endif
-#define HASH_TABLE_SIZE 100
+#define HASH_TABLE_SIZE 1000
 
 #define DICT_FILE "./dictionary/words.txt"
 
@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
     printf("size of entry : %lu bytes\n", sizeof(entry));
 
     /* build the entry */
-    entry *pHead, *e, *hash_e[HASH_TABLE_SIZE], *hash_pHead[HASH_TABLE_SIZE];
+    entry *hash_e[HASH_TABLE_SIZE], *hash_pHead[HASH_TABLE_SIZE];
     for(int j = 0; j < HASH_TABLE_SIZE; j++) {
         hash_pHead[j] = (entry *)malloc(sizeof(entry));
         hash_e[j] = hash_pHead[j];
@@ -69,7 +69,10 @@ int main(int argc, char *argv[])
     }
 
 #if defined(__GNUC__)
-    __builtin___clear_cache((char *) pHead, (char *) pHead + sizeof(entry));
+    for(int j = 0; j < HASH_TABLE_SIZE; j++) {
+        __builtin___clear_cache((char *)hash_pHead[j],
+                                (char *)hash_pHead[j] + sizeof(entry));
+    };
 #endif
     clock_gettime(CLOCK_REALTIME, &start);
     while (fgets(line, sizeof(line), fp)) {
@@ -94,16 +97,21 @@ int main(int argc, char *argv[])
     /* the givn last name to find */
     char input[MAX_LAST_NAME_SIZE] = "zyxel";
     int key = getHashKey(input);
+
     assert(findName(input, hash_e[key]) &&
            "Did you implement findName() in " IMPL "?");
     assert(0 == strcmp(findName(input, hash_e[key])->lastName, "zyxel"));
 
 #if defined(__GNUC__)
-    __builtin___clear_cache((char *) pHead, (char *) pHead + sizeof(entry));
+    for(int j = 0; j < HASH_TABLE_SIZE; j++) {
+        __builtin___clear_cache((char *)hash_pHead[j],
+                                (char *)hash_pHead[j] + sizeof(entry));
+    }
+
 #endif
     /* compute the execution time */
     clock_gettime(CLOCK_REALTIME, &start);
-    findName(input, e);
+    findName(input, hash_e[key]);
     clock_gettime(CLOCK_REALTIME, &end);
     cpu_time2 = diff_in_second(start, end);
 
@@ -114,8 +122,12 @@ int main(int argc, char *argv[])
     printf("execution time of append() : %lf sec\n", cpu_time1);
     printf("execution time of findName() : %lf sec\n", cpu_time2);
 
-    if (pHead->pNext) free(pHead->pNext);
-    free(pHead);
+    for(int j = 0; j < HASH_TABLE_SIZE; j++) {
+        if(hash_pHead[j]->pNext)
+            free(hash_pHead[j]->pNext);
+        free(hash_pHead[j]);
+
+    }
 
     return 0;
 }
