@@ -5,6 +5,7 @@ int main(void)
 {
     FILE *fp = fopen("orig.txt", "r");
     FILE *output = fopen("output.txt", "w");
+
     if (!fp) {
         printf("ERROR opening input file orig.txt\n");
         exit(0);
@@ -22,16 +23,16 @@ int main(void)
         orig_sum_a += orig_a;
         orig_sum_f += orig_f;
     }
-    fclose(fp);
-
-    fp = fopen("opt.txt", "r");
-    if (!fp) {
-        fp = fopen("orig.txt", "r");
-        if (!fp) {
-            printf("ERROR opening input file opt.txt\n");
-            exit(0);
-        }
-    }
+//    fclose(fp);
+//
+//    fp = fopen("opt.txt", "r");
+//    if (!fp) {
+//        fp = fopen("orig.txt", "r");
+//        if (!fp) {
+//            printf("ERROR opening input file opt.txt\n");
+//            exit(0);
+//        }
+//    }
     double opt_sum_a = 0.0, opt_sum_f = 0.0, opt_a, opt_f;
     for (i = 0; i < 100; i++) {
         if (feof(fp)) {
