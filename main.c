@@ -9,13 +9,18 @@
 #include IMPL
 
 #ifdef OPT
-#define OUT_FILE "opt.txt"
-#else
-#define OUT_FILE "orig.txt"
-#endif
-#define HASH_TABLE_SIZE 1000
 
-#define POOL_SIZE 47600000
+#define OUT_FILE "opt.txt"
+#define HASH_TABLE_SIZE 10000
+
+#else
+
+#define OUT_FILE "orig.txt"
+#define HASH_TABLE_SIZE 1
+
+#endif
+
+#define POOL_SIZE 8400000
 #define DICT_FILE "./dictionary/words.txt"
 
 int getHashKey(const char* str)
@@ -130,7 +135,9 @@ int main(int argc, char *argv[])
 
 
 #ifdef OPT
-    free(pHead);
+    for(int j=0; j < HASH_TABLE_SIZE; j++) {
+        free(hash_pHead[j]);
+    }
     pool_destroy(mpool);
 #else
 
