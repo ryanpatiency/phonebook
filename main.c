@@ -99,11 +99,14 @@ int main(int argc, char *argv[])
 
 
 #ifdef OPT
+    free(pHead);
     pool_destroy(mpool);
 #else
-    if(pHead->pNext)
-        free(pHead->pNext);
-    free(pHead);
+
+    while((e = pHead) != NULL) {
+        pHead = e->pNext;
+        free(e);
+    }
 #endif
     return 0;
 }
