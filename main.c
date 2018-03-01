@@ -11,7 +11,7 @@
 #ifdef OPT
 
 #define OUT_FILE "opt.txt"
-#define HASH_TABLE_SIZE 10000
+#define HASH_TABLE_SIZE 997
 
 #else
 
@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
     double cpu_time1, cpu_time2;
 
 #ifdef OPT
-    mpool = pool_create(47600000);
+    mpool = pool_create(POOL_SIZE);
 #endif
 
     /* check file opening */
