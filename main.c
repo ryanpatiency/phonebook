@@ -4,6 +4,8 @@
 #include <time.h>
 #include <assert.h>
 
+#include "mpool.h"
+
 #include IMPL
 
 #ifdef OPT
@@ -12,6 +14,7 @@
 #define OUT_FILE "orig.txt"
 #endif
 
+#define POOL_SIZE 47600000
 #define DICT_FILE "./dictionary/words.txt"
 
 static double diff_in_second(struct timespec t1, struct timespec t2)
@@ -34,6 +37,7 @@ int main(int argc, char *argv[])
     char line[MAX_LAST_NAME_SIZE];
     struct timespec start, end;
     double cpu_time1, cpu_time2;
+    mpool = pool_create(47600000);
 
     /* check file opening */
     fp = fopen(DICT_FILE, "r");
@@ -94,6 +98,6 @@ int main(int argc, char *argv[])
 
     if (pHead->pNext) free(pHead->pNext);
     free(pHead);
-
+    pool_destroy(mpool);
     return 0;
 }
