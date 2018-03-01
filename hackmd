@@ -1,0 +1,243 @@
+# 2018q1 Homework1 (phonebook)
+contributed by < `ryanpatiency` >
+
+* 內容
+    * 作業一影片要求整理
+    * 見賢思齊的成績紀錄
+    * 實驗紀錄：重複 `ryanwang` 同學的實驗 ( struct size, hash table ) 達到已知最低的 cache-miss: 21% 
+    * 實驗紀錄：重複 `ierosodin` 同學的實驗
+	* 精彩的 500 頁 Intel Event Manual 閱讀教學
+    * 問題紀錄
+>如果想要大家即時看到 hackMD，似乎要使用原本的網址，而不是發表後的網址
+## 作業一影片要求整理：
+-  learning the following:
+    - perf
+        - perf top
+        - perf stat
+    - superscalar
+    - out-of-order execution
+    - dual-issue
+    - branch prediction (& how to use gcc to optimize)
+    - tracepoint
+    - clock_gettime man page
+    - makefile
+    - gnuplokt
+- 目的：實作自己的 `phonebook_opt.c` 
+    - [ ] `findname()`
+    - [ ] `append()`
+    - Compare cache miss and run time 
+        - make command: make cache-miss & make run
+- challenge: fuzzy search
+### Todo for myself
+- find the lowest cache miss report in this class's history
+- examine the method he/she used
+- do it again myself
+- if possible, combine-other's method
+## 見賢思齊的成績紀錄 memory miss:
+- memory pool: 37.338% [link](https://hackmd.io/s/BJl6pFyzf)
+- mmap: 29.101% (but require extra time) [link](https://hackmd.io/s/H1g0s3sax)
+- hash function 26.915% [link](https://hackmd.io/s/Sk-qaWiYl)
+- memory pool: 29.716% [link](https://hackmd.io/s/SJ4uqs9Yx)
+- entry size 32.843% [link](https://hackmd.io/s/BJjL6cQ6)
+
+=> 第1要務：了解 26.915% 是怎麼做到的。
+（但我記得影片中老師提到有一同學做到16% 希望有心人士能提供其共筆連結）
+（我自己回去看影片，發現是在 [42分](https://youtu.be/ZICRLKf_bVw?t=42m50s)處，老師把 60% 說成16% 了）
+
+## 實驗紀錄：重複 26.915% `ryanwang` 同學的實驗
+> 以下的實驗會跟著這位同學的腳步走，請大家再閱讀時要對照著看
+> [link](https://hackmd.io/s/Sk-qaWiYl)
+* 了解下面的用法
+```
+$ echo 1 | sudo tee /proc/sys/vm/drop_caches
+```
+補充：之所以要用 ` tee `
+是因為權限的關係，大家可以實驗看看下面兩行
+```
+$ sudo echo 1 > /proc/sys/vm/drop_caches
+$ echo 1 > sudo /proc/sys/vm/drop_caches
+```
+網路資料：[link](https://unix.stackexchange.com/questions/17936/setting-proc-sys-vm-drop-caches-to-clear-cache)
+```
+To free pagecache:
+    echo 1 > /proc/sys/vm/drop_caches
+To free dentries and inodes:
+    echo 2 > /proc/sys/vm/drop_caches
+To free pagecache, dentries and inodes:
+    echo 3 > /proc/sys/vm/drop_caches
+```
+1. 複製 orig.c to opt.c
+2. 更新 make cache-test 指令，先執行 
+`echo 3 > /proc/sys/vm/drop_caches`
+    => git commit
+3. 我的 make cache-test 的執行結果
+```
+ Performance counter stats for './phonebook_opt' (100 runs):
+
+         1,178,032      cache-misses              #   78.818 % of all cache refs      ( +-  0.97% )
+         1,494,619      cache-references                                              ( +-  0.90% )
+       261,906,975      instructions              #    1.17  insns per cycle          ( +-  0.02% )
+       223,419,587      cycles                                                        ( +-  1.14% )
+
+       0.095444565 seconds time elapsed                                          ( +-  1.55% )
+```
+4. 我的 make plot 的圖形![](https://i.imgur.com/KoDWHDm.png)
+
+    => 發現：我的電腦速度本來就比這位`ryanwang522`同學慢，他的初始執行時間是 0.04 秒 / 0.006 秒，我的是 0.06 秒 / 0.007 秒
+
+5. 縮小 struct __PHONE_BOOK_ENTRY 的大小，把儘量多的 data 塞到 我的 L1d cache 裏面
+    => git commit
+```
+typedef struct __PHONE_BOOK_ENTRY {
+    char lastName[MAX_LAST_NAME_SIZE];
+//    char firstName[16];
+//    char email[16];
+//    char phone[10];
+//    char cell[10];
+//    char addr1[16];
+//    char addr2[16];
+//    char city[16];
+//    char state[2];
+//    char zip[5];
+    struct __PHONE_BOOK_ENTRY *pNext;
+} entry;
+```
+    更新後的 cache-miss and plot
+    
+    Performance counter stats for './phonebook_opt' (100 runs):
+
+           103,879      cache-misses              #   32.039 % of all cache refs      ( +-  1.26% )
+           324,226      cache-references                                              ( +-  1.76% )
+       241,106,445      instructions              #    1.72  insns per cycle          ( +-  0.02% )
+       140,094,134      cycles                                                        ( +-  1.03% )
+
+       0.059512604 seconds time elapsed                                          ( +-  1.29% )
+但再這時我發現我的 plot 和之前一樣，於是回去看 terminal, 發現 ./calculate 運行失敗，調查後，由於 orig.c 沒錯，推測是 calculate.c 寫錯
+=> 調查後，真的錯了，應該要將以下註解，推測是之前的程式碼不一樣 
+
+```
+//    fclose(fp);
+//
+//    fp = fopen("opt.txt", "r");
+//    if (!fp) {
+//        fp = fopen("orig.txt", "r");
+//        if (!fp) {
+//            printf("ERROR opening input file opt.txt\n");
+//            exit(0);
+//        }
+//    }
+```
+* 原理
+現在是 orig.txt 有兩百個資料，先讀一百個 orig 再讀一百個 opt，但 calculate.c 直接 讀兩次 orig.txt 的前一百個資料，plot 當然相同
+
+    * 我是從 sysprog21/phonebook clone 下來的
+    * 我的 git log: 最新是 
+`
+Merge pull request #6 from Yuessiah/master - Jim Huang
+`
+    * 由於命名問題，比較好的改法是在 makefile 上 -DOPT ，我的 github 上是用這種改法，
+* plot
+![](https://i.imgur.com/Mzzjfil.png)
+6. Hash table
+    - tutorial [link](https://www.youtube.com/watch?v=KyUTuwz_b7Q)
+    - BKDR (backdoor) Hashtable tutorial [link](http://www.partow.net/programming/hashfunctions/)
+        - According to the website, "This hash function comes from Brian Kernighan and Dennis Ritchie's book 'The C Programming Language'" 
+        => 可見我們老師多愛 C ，要不然就是網站亂講 （我偏向前者）
+    - `ryanwang522`同學的 Code 有點複雜，我稍微修改了下
+    他的 code:
+    ```
+    if (hashTable[hashVal] == NULL) {
+    /
+     
+        hashTable[hashVal] = (entry *) malloc(sizeof(entry)); 
+        tableHead[hashVal] = hashTable[hashVal];
+    }
+    hashTable[hashVal] = append(line, hashTable[hashVal]);
+    ```
+   我的 code:
+   ```
+    hash_e[key] = append(line, hash_e[key]);
+    // key = hashVal
+    ```
+    * 結果 1 ( hash_table 數量為 100 )
+    ```
+            81,419      cache-misses              #   28.637 % of all cache refs      ( +-  0.88% )
+           284,311      cache-references                                              ( +-  2.36% )
+       237,526,955      instructions              #    1.57  insns per cycle          ( +-  0.02% )
+       151,257,197      cycles                                                        ( +-  0.83% )
+   ```
+    * 結果 2 ( hash_table 數量為 1000)
+    ```
+              92,349      cache-misses              #   21.690 % of all cache refs      ( +-  2.34% )
+           425,764      
+-references                                              ( +-  2.81% )
+       237,542,327      instructions              #    1.51  insns per cycle          ( +-  0.02% )
+       157,457,723      cycles                                                        ( +-  0.95% )
+    ```
+    **21%!! 只是 follow 前人的腳步就能超過已知最佳成績，真的要感謝這位`ryanwang522`同學**
+    
+## 實驗紀錄：重複 `ierosodin` 同學的實驗
+
+* 學習指令 `./phonebook_orig & perf top -p $!`
+    * `&` make the program run in background
+    * 關於 $! 請見最後
+    * 其他：run `$perf help top`
+	> In fact, this command is tricky way of `perf record`
+	> To run `perf record`, one better run `echo 0 | sudo tee /proc/sys/kernel/kptr_restrict ` first
+ [(tutorial)](https://www.ibm.com/developerworks/library/l-analyzing-performance-perf-annotate-trs/)
+* 學習指令 `perf stat --repeat 100 -e cache-misses,cache-references,instructions,cycles ./phonebook_orig`
+	* `$perf help stat`
+	* To find those event: run `$perf help list`
+	**We can find a spooky thing in the end of the list:**
+	```
+	1. Intel® 64 and IA-32 Architectures Software Developer’s Manual Volume
+       3B: System Programming Guide
+       http://www.intel.com/Assets/PDF/manual/253669.pdf
+
+    2. AMD64 Architecture Programmer’s Manual Volume 2: System Programming
+       http://support.amd.com/us/Processor_TechDocs/24593_APM_v2.pdf
+
+	```
+	> I don't need to click in and I know the size will be big. But to find detail of the event, this link is usefulq
+	* To find those event [link2](https://perf.wiki.kernel.org/index.php/Tutorial#Events)
+	> Wiki also tells you to look manual, So to understand what is cache-misses, cache-references, I suggest you don't go to wiki, just go to look at the manual.
+	* I am intel user. So I will look the first link
+	* How I read will be at the end of this section
+	
+* 看[教學](http://www.brendangregg.com/perf.html#Events)
+	* 學會其他不錯的 event: L1-dcache-loads,L1-dcache-load-misses,L1-dcache-stores
+		* 了解 cashe-store 和 cashe-miss 的差別：[教學](https://stackoverflow.com/questions/18408189/cpu-cache-performance-store-misses-vs-load-misses)
+
+## 精彩的 500 頁 Intel Event Manual 閱讀教學 manual reading tutorial:
+	* I read it because I want to know what is a cache references in `perf stat -e cache-references` 
+	* ctrl-f search for cache references
+	* in page 179 (vol. 3B 18-5), we find a "Last Level Cache References", and it's description is also there, that looks like what we want
+	* remember what the man perf list say
+	```
+		   If the Intel docs for a QM720 Core i7 describe an event as:
+
+		       Event  Umask  Event Mask
+		       Num.   Value  Mnemonic    Description                        Comment
+
+		       A8H      01H  LSD.UOPS    Counts the number of micro-ops     Use cmask=1 and
+		                                 delivered by loop stream detector  invert to count
+		                                                                    cycles
+
+		   raw encoding of 0x1A8 can be used:
+
+		       perf stat -e r1a8 -a sleep 1
+		       perf record -e r1a8 ...
+	```
+	so it means we can call the "Last Level Cache References" by `perf stat -e r412e` , Now, do your experiment!
+## 問題紀錄和解答
+> linux 中 $! 代表什麼意思呢？
+* [解答]((https://stackoverflow.com/questions/21063765/get-pid-in-shell-bash))
+    -   `$!` is the PID of the last backgrounded process.
+    -   `kill -0 $PID` checks whether it's still running.
+    -   `$$` is the PID of the current shell.
+
+> `perf stat -e r1a8 -a sleep 1` 中的 1a8 是 event, 但是前面為什麼要有 r 
+
+> 為什麼初始情形，我執行 `./phonebook_orig & perf top -p $!` 的結果和 [ierosodin](https://hackmd.io/s/SJ4uqs9Yx) 不一樣，我執行了好幾次都是 100 % sample 到某個 kernel function 去，即使我的 sample rate 已經調到最高
+
+

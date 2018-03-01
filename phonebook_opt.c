@@ -3,12 +3,12 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "mpool.h"
 #include "phonebook_opt.h"
 
-/* TODO: FILL YOUR OWN IMPLEMENTATION HERE! */
+/* original version */
 entry *findName(char lastName[], entry *pHead)
 {
-    /* TODO: implement */
     while(pHead != NULL) {
         if(strcasecmp(lastName, pHead->lastName) == 0)
             return pHead;
@@ -19,8 +19,9 @@ entry *findName(char lastName[], entry *pHead)
 
 entry *append(char lastName[], entry *e)
 {
-    /* TODO: implement */
-    e->pNext = (entry *)malloc(sizeof(entry));
+
+    /* allocate memory for the new entry and put lastName */
+    e->pNext = (entry *)pool_alloc(mpool, sizeof(entry));
     e = e->pNext;
     strcpy(e->lastName, lastName);
     e->pNext = NULL;

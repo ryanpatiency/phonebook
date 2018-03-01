@@ -4,6 +4,8 @@
 #include <time.h>
 #include <assert.h>
 
+#include "mpool.h"
+
 #include IMPL
 
 #ifdef OPT
@@ -13,6 +15,7 @@
 #endif
 #define HASH_TABLE_SIZE 1000
 
+#define POOL_SIZE 47600000
 #define DICT_FILE "./dictionary/words.txt"
 
 int getHashKey(const char* str)
@@ -50,6 +53,9 @@ int main(int argc, char *argv[])
     struct timespec start, end;
     double cpu_time1, cpu_time2;
 
+#ifdef OPT
+    mpool = pool_create(47600000);
+#endif
 
     /* check file opening */
     fp = fopen(DICT_FILE, "r");
@@ -122,12 +128,20 @@ int main(int argc, char *argv[])
     printf("execution time of append() : %lf sec\n", cpu_time1);
     printf("execution time of findName() : %lf sec\n", cpu_time2);
 
+
+#ifdef OPT
+    free(pHead);
+    pool_destroy(mpool);
+#else
+
     for(int j = 0; j < HASH_TABLE_SIZE; j++) {
-        if(hash_pHead[j]->pNext)
-            free(hash_pHead[j]->pNext);
-        free(hash_pHead[j]);
+        while((hash_e[j] = hash_pHead[j]) != NULL) {
+            hash_pHead[j] = hash_e[j]->pNext;
+            free(hash_e[j]);
+        }
 
     }
 
+#endif
     return 0;
 }
