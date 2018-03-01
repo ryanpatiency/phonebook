@@ -238,3 +238,6 @@ Merge pull request #6 from Yuessiah/master - Jim Huang
 
 > `perf stat -e r1a8 -a sleep 1` 中的 1a8 是 event, 但是前面為什麼要有 r 
 
+> 為什麼初始情形，我執行 `./phonebook_orig & perf top -p $!` 的結果和 [ierosodin](https://hackmd.io/s/SJ4uqs9Yx) 不一樣，我執行了好幾次都是 100 % sample 到某個 kernel function 去，即使我的 sample rate 已經調到最高
+
+
