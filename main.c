@@ -20,8 +20,11 @@
 
 #endif
 
+// pool size = entry size * data rows
 #define POOL_SIZE 8400000
-#define DICT_FILE "./dictionary/words.txt"
+#define DICT_FILE "./dictionary/all-names.txt"
+#define SEARCH_NAME "jserv"
+
 
 int getHashKey(const char* str)
 {
@@ -106,12 +109,12 @@ int main(int argc, char *argv[])
     }
 
     /* the givn last name to find */
-    char input[MAX_LAST_NAME_SIZE] = "zyxel";
+    char input[MAX_LAST_NAME_SIZE] = SEARCH_NAME;
     int key = getHashKey(input);
 
     assert(findName(input, hash_e[key]) &&
            "Did you implement findName() in " IMPL "?");
-    assert(0 == strcmp(findName(input, hash_e[key])->lastName, "zyxel"));
+    assert(0 == strcmp(findName(input, hash_e[key])->lastName, SEARCH_NAME));
 
 #if defined(__GNUC__)
     for(int j = 0; j < HASH_TABLE_SIZE; j++) {
